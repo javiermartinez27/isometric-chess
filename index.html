@@ -54,6 +54,24 @@
             z-index: 20000;
         }
         
+        .turn-indicator {
+            position: fixed;
+            top: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 15px 30px;
+            background-color: #fff;
+            color: #333;
+            border: 3px solid #333;
+            border-radius: 8px;
+            box-shadow: 4px 4px 0px #333;
+            font-family: 'Permanent Marker', cursive;
+            font-size: 20px;
+            z-index: 10000;
+            text-align: center;
+            min-width: 200px;
+        }
+        
         button {
             padding: 12px 24px;
             font-size: 18px;
@@ -88,6 +106,8 @@
     </style>
 </head>
 <body>
+    <div class="turn-indicator" id="turn-indicator"></div>
+
     <div id="map-container">
         <div id="map"></div>
     </div>
@@ -97,6 +117,10 @@
         <button id="clearBtn">Clear</button>
     </div>
 
+    <script src="js/mapGenerator.js"></script>
+    <script src="js/turnManager.js"></script>
+    <script src="js/player.js"></script>
+    <script src="js/enemy.js"></script>
     <script src="js/game.js"></script>
 </body>
 </html>
