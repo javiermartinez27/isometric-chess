@@ -10,8 +10,12 @@ class Enemy {
         this.x = 0;
         this.y = 0;
         this.element = null;
+        this.healthBar = null;
         this.maxMovementPoints = 5;  // Can be configured per enemy
         this.currentMovementPoints = 5;
+        this.maxHealth = 5;
+        this.currentHealth = 5;
+        this.attackPoints = 1;
     }
 
     // Create the enemy
@@ -47,6 +51,9 @@ class Enemy {
         
         // Add enemy to map
         this.mapElement.appendChild(this.element);
+        
+        // Create health bar
+        this.createHealthBar();
     }
 
     // Update enemy position on screen
@@ -61,6 +68,74 @@ class Enemy {
         this.element.style.top = `${isoY + offsetY + (this.config.tileSize * this.config.scale) / 2 - enemySize - 15}px`;
         this.element.style.width = `${enemySize}px`;
         this.element.style.height = `${enemySize}px`;
+        this.updateHealthBar();
+    }
+
+    // Create health bar
+    createHealthBar() {
+        this.healthBar = document.createElement('div');
+        this.healthBar.className = 'health-bar';
+        this.healthBar.innerHTML = `
+            <div class="health-bar-bg">
+                <div class="health-bar-fill" style="width: 100%"></div>
+            </div>
+        `;
+        this.mapElement.appendChild(this.healthBar);
+        this.updateHealthBar();
+    }
+
+    // Update health bar position and value
+    updateHealthBar() {
+        if (!this.healthBar) return;
+        
+        const isoX = (this.x - this.y) * (this.config.tileSize / 2) * this.config.scale;
+        const isoY = (this.x + this.y) * (this.config.tileSize / 4) * this.config.scale;
+        
+        const offsetX = this.config.mapWidth * this.config.tileSize * this.config.scale;
+        const offsetY = this.config.tileSize * 2 * this.config.scale;
+        
+        this.healthBar.style.left = `${isoX + offsetX + (this.config.tileSize * this.config.scale) / 2 - 20}px`;
+        this.healthBar.style.top = `${isoY + offsetY - 25}px`;
+        
+        const healthPercent = (this.currentHealth / this.maxHealth) * 100;
+        const fillElement = this.healthBar.querySelector('.health-bar-fill');
+        fillElement.style.width = `${healthPercent}%`;
+        
+        // Color based on health
+        if (healthPercent > 60) {
+            fillElement.style.backgroundColor = '#4CAF50';
+        } else if (healthPercent > 30) {
+            fillElement.style.backgroundColor = '#FFC107';
+        } else {
+            fillElement.style.backgroundColor = '#F44336';
+        }
+    }
+
+    // Take damage
+    takeDamage(amount) {
+        this.currentHealth -= amount;
+        if (this.currentHealth < 0) this.currentHealth = 0;
+        this.updateHealthBar();
+        
+        if (this.currentHealth <= 0) {
+            this.die();
+        }
+    }
+
+    // Die and remove from game
+    die() {
+        const grid = this.mapGenerator.getGrid();
+        grid[this.y][this.x].hasEnemy = false;
+        
+        if (this.element && this.element.parentNode) {
+            this.element.parentNode.removeChild(this.element);
+        }
+        if (this.healthBar && this.healthBar.parentNode) {
+            this.healthBar.parentNode.removeChild(this.healthBar);
+        }
+        
+        // Remove from turn manager
+        this.turnManager.removeEntity(this);
     }
 
     // Get remaining movement points
@@ -78,8 +153,27 @@ class Enemy {
         // Reset movement points at start of turn
         this.currentMovementPoints = this.maxMovementPoints;
         
-        // Move multiple times
-        this.makeMove();
+        // Decide: attack if player is adjacent, otherwise move
+        if (this.isPlayerAdjacent()) {
+            this.attackPlayer();
+        } else {
+            this.makeMove();
+        }
+    }
+
+    // Check if player is adjacent
+    isPlayerAdjacent() {
+        const dx = Math.abs(this.player.x - this.x);
+        const dy = Math.abs(this.player.y - this.y);
+        return (dx === 1 && dy === 0) || (dx === 0 && dy === 1);
+    }
+
+    // Attack the player
+    attackPlayer() {
+        this.player.takeDamage(this.attackPoints);
+        this.currentMovementPoints = 0;
+        this.turnManager.updateMovementIndicator(0, this.maxMovementPoints);
+        this.turnManager.endTurn();
     }
 
     // Make a single move
@@ -141,6 +235,11 @@ class Enemy {
             if (this.isValidMove(newX, newY)) {
                 const grid = this.mapGenerator.getGrid();
                 
+                // Check if space is occupied by player
+                if (grid[newY][newX].hasPlayer) {
+                    continue; // Can't move into player space, try next move
+                }
+                
                 // Update grid - remove enemy from old position
                 grid[this.y][this.x].hasEnemy = false;
                 
@@ -179,10 +278,13 @@ class Enemy {
         return this.mapGenerator.isValidPosition(x, y);
     }
 
-    // Destroy the enemy
+    // Destroy the enemy (for map clear)
     destroy() {
         if (this.element && this.element.parentNode) {
             this.element.parentNode.removeChild(this.element);
+        }
+        if (this.healthBar && this.healthBar.parentNode) {
+            this.healthBar.parentNode.removeChild(this.healthBar);
         }
         const grid = this.mapGenerator.getGrid();
         if (grid[this.y] && grid[this.y][this.x]) {

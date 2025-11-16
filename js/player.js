@@ -9,8 +9,13 @@ class Player {
         this.x = 0;
         this.y = 0;
         this.element = null;
+        this.healthBar = null;
         this.maxMovementPoints = 5;  // Can be upgraded
         this.currentMovementPoints = 5;
+        this.maxHealth = 10;
+        this.currentHealth = 10;
+        this.attackPoints = 1;  // Can be upgraded
+        this.isSelectingAttackDirection = false;
     }
 
     // Create the player
@@ -46,6 +51,9 @@ class Player {
         
         // Add player to map
         this.mapElement.appendChild(this.element);
+        
+        // Create health bar
+        this.createHealthBar();
     }
 
     // Update player position on screen
@@ -96,6 +104,110 @@ class Player {
     // Start player's turn
     startTurn() {
         this.currentMovementPoints = this.maxMovementPoints;
+        this.isSelectingAttackDirection = false;
+    }
+
+    // Create health bar
+    createHealthBar() {
+        this.healthBar = document.createElement('div');
+        this.healthBar.className = 'health-bar';
+        this.healthBar.innerHTML = `
+            <div class="health-bar-bg">
+                <div class="health-bar-fill" style="width: 100%"></div>
+            </div>
+        `;
+        this.mapElement.appendChild(this.healthBar);
+        this.updateHealthBar();
+    }
+
+    // Update health bar position and value
+    updateHealthBar() {
+        if (!this.healthBar) return;
+        
+        const isoX = (this.x - this.y) * (this.config.tileSize / 2) * this.config.scale;
+        const isoY = (this.x + this.y) * (this.config.tileSize / 4) * this.config.scale;
+        
+        const offsetX = this.config.mapWidth * this.config.tileSize * this.config.scale;
+        const offsetY = this.config.tileSize * 2 * this.config.scale;
+        
+        this.healthBar.style.left = `${isoX + offsetX + (this.config.tileSize * this.config.scale) / 2 - 20}px`;
+        this.healthBar.style.top = `${isoY + offsetY - 25}px`;
+        
+        const healthPercent = (this.currentHealth / this.maxHealth) * 100;
+        const fillElement = this.healthBar.querySelector('.health-bar-fill');
+        fillElement.style.width = `${healthPercent}%`;
+        
+        // Color based on health
+        if (healthPercent > 60) {
+            fillElement.style.backgroundColor = '#4CAF50';
+        } else if (healthPercent > 30) {
+            fillElement.style.backgroundColor = '#FFC107';
+        } else {
+            fillElement.style.backgroundColor = '#F44336';
+        }
+    }
+
+    // Take damage
+    takeDamage(amount) {
+        this.currentHealth -= amount;
+        if (this.currentHealth < 0) this.currentHealth = 0;
+        this.updateHealthBar();
+        
+        if (this.currentHealth <= 0) {
+            this.turnManager.gameOver();
+        }
+    }
+
+    // Start attack mode
+    startAttack() {
+        if (!this.turnManager.isEntityTurn(this) || this.currentMovementPoints <= 0) {
+            return;
+        }
+        this.isSelectingAttackDirection = true;
+        this.turnManager.showAttackDirectionPrompt();
+    }
+
+    // Attack in a direction
+    attack(direction) {
+        if (!this.isSelectingAttackDirection) return;
+        
+        let targetX = this.x;
+        let targetY = this.y;
+        
+        switch(direction) {
+            case 'up': targetY--; break;
+            case 'down': targetY++; break;
+            case 'left': targetX--; break;
+            case 'right': targetX++; break;
+        }
+        
+        // Check if target is in bounds
+        if (targetX < 0 || targetX >= this.config.mapWidth || 
+            targetY < 0 || targetY >= this.config.mapHeight) {
+            this.isSelectingAttackDirection = false;
+            this.turnManager.hideAttackDirectionPrompt();
+            return;
+        }
+        
+        // Check if enemy is at target position
+        const grid = this.mapGenerator.getGrid();
+        if (grid[targetY][targetX].hasEnemy) {
+            // Find and damage the enemy
+            const enemy = this.turnManager.getEntityAt(targetX, targetY);
+            if (enemy) {
+                enemy.takeDamage(this.attackPoints);
+            }
+        }
+        
+        // Attack consumes all remaining movement points and ends turn
+        this.currentMovementPoints = 0;
+        this.turnManager.updateMovementIndicator(this.currentMovementPoints, this.maxMovementPoints);
+        
+        this.isSelectingAttackDirection = false;
+        this.turnManager.hideAttackDirectionPrompt();
+        
+        // End turn
+        this.turnManager.endTurn();
     }
 
     // Get remaining movement points
@@ -115,6 +227,39 @@ class Player {
 
     // Handle keyboard input
     handleKeyPress(event) {
+        // Handle attack direction selection
+        if (this.isSelectingAttackDirection) {
+            switch(event.key) {
+                case 'ArrowUp':
+                    event.preventDefault();
+                    this.attack('up');
+                    return;
+                case 'ArrowDown':
+                    event.preventDefault();
+                    this.attack('down');
+                    return;
+                case 'ArrowLeft':
+                    event.preventDefault();
+                    this.attack('left');
+                    return;
+                case 'ArrowRight':
+                    event.preventDefault();
+                    this.attack('right');
+                    return;
+                case 'Escape':
+                    this.isSelectingAttackDirection = false;
+                    this.turnManager.hideAttackDirectionPrompt();
+                    return;
+            }
+            return;
+        }
+        
+        // Handle attack button
+        if (event.key === 'a' || event.key === 'A') {
+            this.startAttack();
+            return;
+        }
+        
         // Only allow movement if it's player's turn and they have movement points
         if (!this.turnManager.isEntityTurn(this) || this.currentMovementPoints <= 0) {
             return;
@@ -147,6 +292,11 @@ class Player {
         if (this.isValidMove(newX, newY)) {
             const grid = this.mapGenerator.getGrid();
             
+            // Check if space is occupied by enemy
+            if (grid[newY][newX].hasEnemy) {
+                return; // Can't move into enemy space
+            }
+            
             // Update grid - remove player from old position
             grid[this.y][this.x].hasPlayer = false;
             
@@ -158,6 +308,7 @@ class Player {
             grid[this.y][this.x].hasPlayer = true;
             
             this.updatePosition();
+            this.updateHealthBar();
             
             // Decrease movement points
             this.currentMovementPoints--;

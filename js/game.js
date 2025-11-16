@@ -39,6 +39,7 @@ const mapElement = document.getElementById('map');
 const mapContainer = document.getElementById('map-container');
 const generateBtn = document.getElementById('generateBtn');
 const clearBtn = document.getElementById('clearBtn');
+let attackBtn = null;
 
 // Initialize the game
 function init() {
@@ -55,6 +56,25 @@ function init() {
     document.addEventListener('keydown', (event) => {
         if (player) {
             player.handleKeyPress(event);
+        }
+    });
+    
+    // Create attack button
+    attackBtn = document.createElement('button');
+    attackBtn.id = 'attackBtn';
+    attackBtn.textContent = 'Attack (A)';
+    attackBtn.addEventListener('click', () => {
+        if (player) {
+            player.startAttack();
+        }
+    });
+    document.querySelector('.controls').appendChild(attackBtn);
+    
+    // Add restart button listener (will be created by turnManager)
+    document.addEventListener('click', (event) => {
+        if (event.target.id === 'restart-btn') {
+            turnManager.hideGameOver();
+            generateMap();
         }
     });
     
