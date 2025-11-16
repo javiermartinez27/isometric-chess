@@ -5,11 +5,13 @@ class TurnManager {
         this.currentTurnIndex = 0;
         this.turnInProgress = false;
         this.turnIndicator = null;
+        this.movementIndicator = null;
     }
 
     // Initialize the turn manager
     init() {
         this.turnIndicator = this.createTurnIndicator();
+        this.movementIndicator = this.createMovementIndicator();
     }
 
     // Register an entity that can take turns
@@ -49,15 +51,18 @@ class TurnManager {
         // Update visual indicator
         this.updateTurnIndicator(current);
         
+        // Initialize movement indicator with max moves
+        const maxMoves = current.entity.getMaxMoves();
+        this.updateMovementIndicator(maxMoves, maxMoves);
+        
         // Notify the entity it's their turn
         if (current.type === 'player') {
             current.entity.startTurn();
         } else if (current.type === 'enemy') {
-            // Enemy takes 3 seconds to make their move
+            // Enemy takes 1 second to start, then will call endTurn when done
             setTimeout(() => {
                 if (this.turnInProgress) {
                     current.entity.takeTurn();
-                    this.endTurn();
                 }
             }, 1000);
         }
@@ -91,6 +96,33 @@ class TurnManager {
         return document.getElementById('turn-indicator');
     }
 
+    // Create movement indicator
+    createMovementIndicator() {
+        const indicator = document.createElement('div');
+        indicator.id = 'movement-indicator';
+        indicator.className = 'movement-indicator';
+        document.body.appendChild(indicator);
+        return indicator;
+    }
+
+    // Update movement indicator display
+    updateMovementIndicator(current, max) {
+        if (!this.movementIndicator) return;
+        
+        // Clear existing dots
+        this.movementIndicator.innerHTML = '';
+        
+        // Create movement dots
+        for (let i = 0; i < max; i++) {
+            const dot = document.createElement('div');
+            dot.className = 'movement-dot';
+            if (i < current) {
+                dot.classList.add('active');
+            }
+            this.movementIndicator.appendChild(dot);
+        }
+    }
+
     // Update turn indicator display
     updateTurnIndicator(currentEntity) {
         if (!this.turnIndicator) return;
@@ -110,6 +142,9 @@ class TurnManager {
     destroy() {
         if (this.turnIndicator && this.turnIndicator.parentNode) {
             this.turnIndicator.parentNode.removeChild(this.turnIndicator);
+        }
+        if (this.movementIndicator && this.movementIndicator.parentNode) {
+            this.movementIndicator.parentNode.removeChild(this.movementIndicator);
         }
         this.clearEntities();
     }

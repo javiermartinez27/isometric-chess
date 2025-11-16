@@ -10,6 +10,8 @@ class Enemy {
         this.x = 0;
         this.y = 0;
         this.element = null;
+        this.maxMovementPoints = 5;  // Can be configured per enemy
+        this.currentMovementPoints = 5;
     }
 
     // Create the enemy
@@ -61,8 +63,30 @@ class Enemy {
         this.element.style.height = `${enemySize}px`;
     }
 
-    // Take turn (called by TurnManager after 3 second delay)
+    // Get remaining movement points
+    getRemainingMoves() {
+        return this.currentMovementPoints;
+    }
+
+    // Get max movement points
+    getMaxMoves() {
+        return this.maxMovementPoints;
+    }
+
+    // Take turn (called by TurnManager after delay)
     takeTurn() {
+        // Reset movement points at start of turn
+        this.currentMovementPoints = this.maxMovementPoints;
+        
+        // Move multiple times
+        this.makeMove();
+    }
+
+    // Make a single move
+    makeMove() {
+        if (this.currentMovementPoints <= 0) {
+            return;
+        }
         // Calculate direction to player
         const dx = this.player.x - this.x;
         const dy = this.player.y - this.y;
@@ -128,11 +152,26 @@ class Enemy {
                 grid[this.y][this.x].hasEnemy = true;
                 
                 this.updatePosition();
+                
+                // Decrease movement points
+                this.currentMovementPoints--;
+                this.turnManager.updateMovementIndicator(this.currentMovementPoints, this.maxMovementPoints);
+                
+                // Continue moving if points remain
+                if (this.currentMovementPoints > 0) {
+                    setTimeout(() => this.makeMove(), 300);  // Small delay between moves
+                } else {
+                    // No more moves, end turn
+                    this.turnManager.endTurn();
+                }
                 return;  // Successfully moved
             }
         }
         
-        // If no valid move found, stay in place
+        // If no valid move found, use up remaining movement points and end turn
+        this.currentMovementPoints = 0;
+        this.turnManager.updateMovementIndicator(this.currentMovementPoints, this.maxMovementPoints);
+        this.turnManager.endTurn();
     }
 
     // Check if a move is valid

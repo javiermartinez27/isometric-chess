@@ -72,6 +72,35 @@
             min-width: 200px;
         }
         
+        .movement-indicator {
+            position: fixed;
+            top: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+            padding: 12px 20px;
+            background-color: #fff;
+            border: 3px solid #333;
+            border-radius: 8px;
+            box-shadow: 4px 4px 0px #333;
+            z-index: 10000;
+        }
+        
+        .movement-dot {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background-color: #ddd;
+            border: 2px solid #333;
+            transition: background-color 0.2s;
+        }
+        
+        .movement-dot.active {
+            background-color: #4CAF50;
+            box-shadow: 0 0 8px rgba(76, 175, 80, 0.5);
+        }
+        
         button {
             padding: 12px 24px;
             font-size: 18px;

@@ -9,7 +9,8 @@ class Player {
         this.x = 0;
         this.y = 0;
         this.element = null;
-        this.hasMoved = false;
+        this.maxMovementPoints = 5;  // Can be upgraded
+        this.currentMovementPoints = 5;
     }
 
     // Create the player
@@ -94,13 +95,28 @@ class Player {
 
     // Start player's turn
     startTurn() {
-        this.hasMoved = false;
+        this.currentMovementPoints = this.maxMovementPoints;
+    }
+
+    // Get remaining movement points
+    getRemainingMoves() {
+        return this.currentMovementPoints;
+    }
+
+    // Get max movement points
+    getMaxMoves() {
+        return this.maxMovementPoints;
+    }
+
+    // Upgrade movement points (for future upgrades)
+    upgradeMovement(additionalPoints) {
+        this.maxMovementPoints += additionalPoints;
     }
 
     // Handle keyboard input
     handleKeyPress(event) {
-        // Only allow movement if it's player's turn and they haven't moved yet
-        if (!this.turnManager.isEntityTurn(this) || this.hasMoved) {
+        // Only allow movement if it's player's turn and they have movement points
+        if (!this.turnManager.isEntityTurn(this) || this.currentMovementPoints <= 0) {
             return;
         }
         
@@ -143,9 +159,14 @@ class Player {
             
             this.updatePosition();
             
-            // Mark that player has moved and end turn
-            this.hasMoved = true;
-            this.turnManager.endTurn();
+            // Decrease movement points
+            this.currentMovementPoints--;
+            this.turnManager.updateMovementIndicator(this.currentMovementPoints, this.maxMovementPoints);
+            
+            // End turn if no movement points left
+            if (this.currentMovementPoints <= 0) {
+                this.turnManager.endTurn();
+            }
         }
     }
 
