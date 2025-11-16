@@ -16,6 +16,8 @@ class Player {
         this.currentHealth = 10;
         this.attackPoints = 1;  // Can be upgraded
         this.isSelectingAttackDirection = false;
+        this.animator = null;
+        this.animationFrameId = null;
     }
 
     // Create the player
@@ -38,13 +40,13 @@ class Player {
         
         // Create player element
         this.element = document.createElement('div');
+        this.element.className = 'player-sprite';
         this.element.style.position = 'absolute';
-        const playerSize = 10 * this.config.scale;
+        const playerSize = 120 * this.config.scale;  // Larger to accommodate sprite
         this.element.style.width = `${playerSize}px`;
         this.element.style.height = `${playerSize}px`;
-        this.element.style.backgroundColor = 'red';
-        this.element.style.borderRadius = '50%';
         this.element.style.zIndex = '1';
+        this.element.style.imageRendering = 'pixelated';  // Crisp pixel art
         
         // Position the player
         this.updatePosition();
@@ -52,8 +54,14 @@ class Player {
         // Add player to map
         this.mapElement.appendChild(this.element);
         
+        // Initialize sprite animator
+        this.initializeAnimator();
+        
         // Create health bar
         this.createHealthBar();
+        
+        // Start animation loop
+        this.startAnimationLoop();
     }
 
     // Update player position on screen
@@ -63,9 +71,9 @@ class Player {
         
         const offsetX = this.config.mapWidth * this.config.tileSize * this.config.scale;
         const offsetY = this.config.tileSize * 2 * this.config.scale;
-        const playerSize = 10 * this.config.scale;
+        const playerSize = 120 * this.config.scale;  // Match sprite size
         this.element.style.left = `${isoX + offsetX + (this.config.tileSize * this.config.scale) / 2 - playerSize / 2}px`;
-        this.element.style.top = `${isoY + offsetY + (this.config.tileSize * this.config.scale) / 2 - playerSize - 15}px`;
+        this.element.style.top = `${isoY + offsetY + (this.config.tileSize * this.config.scale) / 2 - playerSize + 80}px`;
         this.element.style.width = `${playerSize}px`;
         this.element.style.height = `${playerSize}px`;
         
@@ -125,13 +133,13 @@ class Player {
         if (!this.healthBar) return;
         
         const isoX = (this.x - this.y) * (this.config.tileSize / 2) * this.config.scale;
-        const isoY = (this.x + this.y) * (this.config.tileSize / 4) * this.config.scale;
+        const isoY = (this.x + this.y) * (this.config.tileSize / 4) * this.config.scale - 70;
         
         const offsetX = this.config.mapWidth * this.config.tileSize * this.config.scale;
         const offsetY = this.config.tileSize * 2 * this.config.scale;
         
         this.healthBar.style.left = `${isoX + offsetX + (this.config.tileSize * this.config.scale) / 2 - 20}px`;
-        this.healthBar.style.top = `${isoY + offsetY - 25}px`;
+        this.healthBar.style.top = `${isoY + offsetY}px`;
         
         const healthPercent = (this.currentHealth / this.maxHealth) * 100;
         const fillElement = this.healthBar.querySelector('.health-bar-fill');
@@ -188,6 +196,9 @@ class Player {
             this.turnManager.hideAttackDirectionPrompt();
             return;
         }
+        
+        // Play attack animation
+        this.playAttackAnimation();
         
         // Check if enemy is at target position
         const grid = this.mapGenerator.getGrid();
@@ -324,5 +335,64 @@ class Player {
     // Check if a move is valid
     isValidMove(x, y) {
         return this.mapGenerator.isValidPosition(x, y);
+    }
+
+    // Initialize sprite animator
+    initializeAnimator() {
+        this.animator = new SpriteAnimator(this.element, this.config);
+        
+        // Add animations
+        this.animator.addAnimation(
+            'idle',
+            'art/player/Idle.png',
+            8,  // 8 frames
+            10, // 10 fps
+            true // loop
+        );
+        
+        this.animator.addAnimation(
+            'attack',
+            'art/player/Attack1.png',
+            5,  // 5 frames
+            12, // 12 fps
+            false // don't loop
+        );
+        
+        // Start with idle animation
+        this.animator.play('idle');
+    }
+
+    // Start animation loop
+    startAnimationLoop() {
+        const animate = (currentTime) => {
+            if (this.animator) {
+                this.animator.update(currentTime);
+            }
+            this.animationFrameId = requestAnimationFrame(animate);
+        };
+        this.animationFrameId = requestAnimationFrame(animate);
+    }
+
+    // Play attack animation
+    playAttackAnimation() {
+        if (this.animator) {
+            this.animator.play('attack', () => {
+                // Return to idle after attack completes
+                this.animator.play('idle');
+            });
+        }
+    }
+
+    // Cleanup (for map regeneration)
+    destroy() {
+        if (this.animationFrameId) {
+            cancelAnimationFrame(this.animationFrameId);
+        }
+        if (this.element && this.element.parentNode) {
+            this.element.parentNode.removeChild(this.element);
+        }
+        if (this.healthBar && this.healthBar.parentNode) {
+            this.healthBar.parentNode.removeChild(this.healthBar);
+        }
     }
 }
