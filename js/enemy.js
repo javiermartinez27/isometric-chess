@@ -153,10 +153,17 @@ class Enemy {
         // Reset movement points at start of turn
         this.currentMovementPoints = this.maxMovementPoints;
         
-        // Decide: attack if player is adjacent, otherwise move
-        if (this.isPlayerAdjacent()) {
+        // Health-based behavior: retreat if low health
+        const healthPercent = (this.currentHealth / this.maxHealth);
+        
+        if (healthPercent <= 0.3 && !this.isPlayerAdjacent()) {
+            // Low health and not adjacent - retreat
+            this.retreat();
+        } else if (this.isPlayerAdjacent()) {
+            // Adjacent to player - attack
             this.attackPlayer();
         } else {
+            // Normal behavior - move toward player
             this.makeMove();
         }
     }
@@ -176,101 +183,187 @@ class Enemy {
         this.turnManager.endTurn();
     }
 
-    // Make a single move
+    // A* pathfinding to find optimal path to target
+    findPath(targetX, targetY) {
+        const grid = this.mapGenerator.getGrid();
+        const openSet = [];
+        const closedSet = new Set();
+        const cameFrom = new Map();
+        const gScore = new Map();
+        const fScore = new Map();
+        
+        const startKey = `${this.x},${this.y}`;
+        const targetKey = `${targetX},${targetY}`;
+        
+        openSet.push({ x: this.x, y: this.y });
+        gScore.set(startKey, 0);
+        fScore.set(startKey, this.manhattanDistance(this.x, this.y, targetX, targetY));
+        
+        while (openSet.length > 0) {
+            // Find node with lowest fScore
+            openSet.sort((a, b) => {
+                const aKey = `${a.x},${a.y}`;
+                const bKey = `${b.x},${b.y}`;
+                return (fScore.get(aKey) || Infinity) - (fScore.get(bKey) || Infinity);
+            });
+            
+            const current = openSet.shift();
+            const currentKey = `${current.x},${current.y}`;
+            
+            // Reached target
+            if (currentKey === targetKey) {
+                return this.reconstructPath(cameFrom, current);
+            }
+            
+            closedSet.add(currentKey);
+            
+            // Check all neighbors
+            const neighbors = [
+                { x: current.x + 1, y: current.y },
+                { x: current.x - 1, y: current.y },
+                { x: current.x, y: current.y + 1 },
+                { x: current.x, y: current.y - 1 }
+            ];
+            
+            for (const neighbor of neighbors) {
+                const neighborKey = `${neighbor.x},${neighbor.y}`;
+                
+                // Skip if already evaluated or invalid
+                if (closedSet.has(neighborKey)) continue;
+                if (!this.isValidMove(neighbor.x, neighbor.y)) continue;
+                
+                // Skip if occupied by player (unless it's the target)
+                if (grid[neighbor.y][neighbor.x].hasPlayer && neighborKey !== targetKey) continue;
+                
+                const tentativeGScore = (gScore.get(currentKey) || Infinity) + 1;
+                
+                if (!openSet.some(n => n.x === neighbor.x && n.y === neighbor.y)) {
+                    openSet.push(neighbor);
+                } else if (tentativeGScore >= (gScore.get(neighborKey) || Infinity)) {
+                    continue;
+                }
+                
+                cameFrom.set(neighborKey, current);
+                gScore.set(neighborKey, tentativeGScore);
+                fScore.set(neighborKey, tentativeGScore + this.manhattanDistance(neighbor.x, neighbor.y, targetX, targetY));
+            }
+        }
+        
+        return null; // No path found
+    }
+    
+    // Manhattan distance heuristic
+    manhattanDistance(x1, y1, x2, y2) {
+        return Math.abs(x1 - x2) + Math.abs(y1 - y2);
+    }
+    
+    // Reconstruct path from A* result
+    reconstructPath(cameFrom, current) {
+        const path = [{ x: current.x, y: current.y }];
+        let currentKey = `${current.x},${current.y}`;
+        
+        while (cameFrom.has(currentKey)) {
+            current = cameFrom.get(currentKey);
+            currentKey = `${current.x},${current.y}`;
+            path.unshift({ x: current.x, y: current.y });
+        }
+        
+        return path;
+    }
+    
+    // Make a single move toward player using A*
     makeMove() {
         if (this.currentMovementPoints <= 0) {
             return;
         }
-        // Calculate direction to player
-        const dx = this.player.x - this.x;
-        const dy = this.player.y - this.y;
         
-        // Create list of possible moves prioritized by distance to player
-        const moves = [];
+        // Find path to player
+        const path = this.findPath(this.player.x, this.player.y);
         
-        // Prioritize moving closer on the axis with greater distance
-        if (Math.abs(dx) > Math.abs(dy)) {
-            // Horizontal movement is more important
-            if (dx > 0) {
-                moves.push({ dx: 1, dy: 0, priority: 1 });   // Right (towards player)
-            } else if (dx < 0) {
-                moves.push({ dx: -1, dy: 0, priority: 1 });  // Left (towards player)
+        if (path && path.length > 1) {
+            // path[0] is current position, path[1] is next step
+            const nextStep = path[1];
+            this.moveTo(nextStep.x, nextStep.y);
+        } else {
+            // No path found, end turn
+            this.currentMovementPoints = 0;
+            this.turnManager.updateMovementIndicator(this.currentMovementPoints, this.maxMovementPoints);
+            this.turnManager.endTurn();
+        }
+    }
+    
+    // Retreat away from player using A*
+    retreat() {
+        if (this.currentMovementPoints <= 0) {
+            return;
+        }
+        
+        // Find the valid position farthest from player
+        const grid = this.mapGenerator.getGrid();
+        const possibleMoves = [
+            { x: this.x + 1, y: this.y },
+            { x: this.x - 1, y: this.y },
+            { x: this.x, y: this.y + 1 },
+            { x: this.x, y: this.y - 1 }
+        ];
+        
+        let bestMove = null;
+        let maxDistance = -1;
+        
+        for (const move of possibleMoves) {
+            if (this.isValidMove(move.x, move.y) && !grid[move.y][move.x].hasPlayer) {
+                const distance = this.manhattanDistance(move.x, move.y, this.player.x, this.player.y);
+                if (distance > maxDistance) {
+                    maxDistance = distance;
+                    bestMove = move;
+                }
             }
-            
-            if (dy > 0) {
-                moves.push({ dx: 0, dy: 1, priority: 2 });   // Down
-            } else if (dy < 0) {
-                moves.push({ dx: 0, dy: -1, priority: 2 });  // Up
+        }
+        
+        if (bestMove) {
+            this.moveTo(bestMove.x, bestMove.y);
+        } else {
+            // Can't retreat, end turn
+            this.currentMovementPoints = 0;
+            this.turnManager.updateMovementIndicator(this.currentMovementPoints, this.maxMovementPoints);
+            this.turnManager.endTurn();
+        }
+    }
+    
+    // Move to specific position
+    moveTo(newX, newY) {
+        const grid = this.mapGenerator.getGrid();
+        
+        // Update grid - remove enemy from old position
+        grid[this.y][this.x].hasEnemy = false;
+        
+        // Move enemy
+        this.x = newX;
+        this.y = newY;
+        
+        // Update grid - add enemy to new position
+        grid[this.y][this.x].hasEnemy = true;
+        
+        this.updatePosition();
+        
+        // Decrease movement points
+        this.currentMovementPoints--;
+        this.turnManager.updateMovementIndicator(this.currentMovementPoints, this.maxMovementPoints);
+        
+        // Continue moving if points remain and not adjacent to player
+        if (this.currentMovementPoints > 0 && !this.isPlayerAdjacent()) {
+            const healthPercent = (this.currentHealth / this.maxHealth);
+            if (healthPercent <= 0.3) {
+                // Continue retreating
+                setTimeout(() => this.retreat(), 300);
+            } else {
+                // Continue approaching
+                setTimeout(() => this.makeMove(), 300);
             }
         } else {
-            // Vertical movement is more important
-            if (dy > 0) {
-                moves.push({ dx: 0, dy: 1, priority: 1 });   // Down (towards player)
-            } else if (dy < 0) {
-                moves.push({ dx: 0, dy: -1, priority: 1 });  // Up (towards player)
-            }
-            
-            if (dx > 0) {
-                moves.push({ dx: 1, dy: 0, priority: 2 });   // Right
-            } else if (dx < 0) {
-                moves.push({ dx: -1, dy: 0, priority: 2 });  // Left
-            }
+            // No more moves or adjacent to player, end turn
+            this.turnManager.endTurn();
         }
-        
-        // Add perpendicular moves as fallback
-        if (dx !== 0) {
-            moves.push({ dx: 0, dy: 1, priority: 3 });   // Down
-            moves.push({ dx: 0, dy: -1, priority: 3 });  // Up
-        }
-        if (dy !== 0) {
-            moves.push({ dx: 1, dy: 0, priority: 3 });   // Right
-            moves.push({ dx: -1, dy: 0, priority: 3 });  // Left
-        }
-        
-        // Try moves in priority order
-        for (const move of moves) {
-            const newX = this.x + move.dx;
-            const newY = this.y + move.dy;
-            
-            if (this.isValidMove(newX, newY)) {
-                const grid = this.mapGenerator.getGrid();
-                
-                // Check if space is occupied by player
-                if (grid[newY][newX].hasPlayer) {
-                    continue; // Can't move into player space, try next move
-                }
-                
-                // Update grid - remove enemy from old position
-                grid[this.y][this.x].hasEnemy = false;
-                
-                // Move enemy
-                this.x = newX;
-                this.y = newY;
-                
-                // Update grid - add enemy to new position
-                grid[this.y][this.x].hasEnemy = true;
-                
-                this.updatePosition();
-                
-                // Decrease movement points
-                this.currentMovementPoints--;
-                this.turnManager.updateMovementIndicator(this.currentMovementPoints, this.maxMovementPoints);
-                
-                // Continue moving if points remain
-                if (this.currentMovementPoints > 0) {
-                    setTimeout(() => this.makeMove(), 300);  // Small delay between moves
-                } else {
-                    // No more moves, end turn
-                    this.turnManager.endTurn();
-                }
-                return;  // Successfully moved
-            }
-        }
-        
-        // If no valid move found, use up remaining movement points and end turn
-        this.currentMovementPoints = 0;
-        this.turnManager.updateMovementIndicator(this.currentMovementPoints, this.maxMovementPoints);
-        this.turnManager.endTurn();
     }
 
     // Check if a move is valid
