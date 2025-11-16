@@ -113,7 +113,7 @@ class MapGenerator {
         pillar.style.top = `${isoY + offsetY - (20 * this.config.scale)}px`;
         pillar.style.width = `${this.config.tileSize * this.config.scale}px`;
         pillar.style.height = `${this.config.tileSize * this.config.scale}px`;  // Same as ground tile
-        pillar.style.zIndex = '2';  // Higher than ground tiles
+        pillar.style.zIndex = this.calculateZIndex(x, y);
         
         // Set pillar image
         pillar.style.backgroundImage = `url('${this.config.pillarPath}${this.config.pillarTypes[pillarType]}')`;
@@ -133,6 +133,14 @@ class MapGenerator {
     // Get the current grid
     getGrid() {
         return this.grid;
+    }
+
+    // Calculate z-index based on grid position
+    // Lower on the map (higher y) and to the right (higher x) should have higher z-index
+    calculateZIndex(x, y) {
+        // Base z-index calculation: y * mapWidth + x
+        // This ensures sprites lower on the map appear in front
+        return y * this.config.mapWidth + x;
     }
 
     // Check if a position is valid (has ground, no pillar)

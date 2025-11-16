@@ -44,7 +44,6 @@ class Enemy {
         this.element.style.height = `${enemySize}px`;
         this.element.style.backgroundColor = 'blue';
         this.element.style.borderRadius = '50%';
-        this.element.style.zIndex = '1';
         
         // Position the enemy
         this.updatePosition();
@@ -68,6 +67,7 @@ class Enemy {
         this.element.style.top = `${isoY + offsetY + (this.config.tileSize * this.config.scale) / 2 - enemySize - 15}px`;
         this.element.style.width = `${enemySize}px`;
         this.element.style.height = `${enemySize}px`;
+        this.element.style.zIndex = this.mapGenerator.calculateZIndex(this.x, this.y);
         this.updateHealthBar();
     }
 

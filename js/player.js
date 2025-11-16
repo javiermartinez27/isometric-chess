@@ -45,7 +45,6 @@ class Player {
         const playerSize = 120 * this.config.scale;  // Larger to accommodate sprite
         this.element.style.width = `${playerSize}px`;
         this.element.style.height = `${playerSize}px`;
-        this.element.style.zIndex = '1';
         this.element.style.imageRendering = 'pixelated';  // Crisp pixel art
         
         // Position the player
@@ -76,6 +75,7 @@ class Player {
         this.element.style.top = `${isoY + offsetY + (this.config.tileSize * this.config.scale) / 2 - playerSize + 80}px`;
         this.element.style.width = `${playerSize}px`;
         this.element.style.height = `${playerSize}px`;
+        this.element.style.zIndex = this.mapGenerator.calculateZIndex(this.x, this.y);
         
         // Center camera on player
         this.centerCamera();
