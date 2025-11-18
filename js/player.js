@@ -16,8 +16,11 @@ class Player {
         this.currentHealth = 10;
         this.attackPoints = 1;  // Can be upgraded
         this.isSelectingAttackDirection = false;
+        this.isSelectingSpellDirection = false;
         this.animator = null;
         this.animationFrameId = null;
+        this.magicSystem = null;
+        this.spellTargetIndicators = []; // Visual indicators for spell targets
     }
 
     // Create the player
@@ -113,6 +116,11 @@ class Player {
     startTurn() {
         this.currentMovementPoints = this.maxMovementPoints;
         this.isSelectingAttackDirection = false;
+        this.isSelectingSpellDirection = false;
+        // Update spell cooldowns
+        if (this.magicSystem) {
+            this.magicSystem.updateCooldowns();
+        }
     }
 
     // Create health bar
@@ -238,6 +246,34 @@ class Player {
 
     // Handle keyboard input
     handleKeyPress(event) {
+        // Handle spell direction selection
+        if (this.isSelectingSpellDirection) {
+            switch(event.key) {
+                case 'ArrowUp':
+                    event.preventDefault();
+                    this.castSpell('up');
+                    return;
+                case 'ArrowDown':
+                    event.preventDefault();
+                    this.castSpell('down');
+                    return;
+                case 'ArrowLeft':
+                    event.preventDefault();
+                    this.castSpell('left');
+                    return;
+                case 'ArrowRight':
+                    event.preventDefault();
+                    this.castSpell('right');
+                    return;
+                case 'Escape':
+                    this.isSelectingSpellDirection = false;
+                    this.turnManager.hideSpellDirectionPrompt();
+                    this.hideSpellTargetIndicators();
+                    return;
+            }
+            return;
+        }
+        
         // Handle attack direction selection
         if (this.isSelectingAttackDirection) {
             switch(event.key) {
@@ -268,6 +304,12 @@ class Player {
         // Handle attack button
         if (event.key === 'a' || event.key === 'A') {
             this.startAttack();
+            return;
+        }
+        
+        // Handle spell casting button
+        if (event.key === 's' || event.key === 'S') {
+            this.startSpellCast();
             return;
         }
         
@@ -381,6 +423,154 @@ class Player {
                 this.animator.play('idle');
             });
         }
+    }
+
+    // Initialize magic system
+    initializeMagicSystem() {
+        this.magicSystem = new MagicSystem(this.config, this.mapElement, this.mapGenerator);
+        
+        // Add fireball spell
+        this.magicSystem.addSpell(new Fireball());
+        
+        // Can add more spells here in the future
+        // this.magicSystem.addSpell(new LightningBolt());
+        // this.magicSystem.addSpell(new Meteor());
+    }
+
+    // Start spell casting mode
+    startSpellCast() {
+        if (!this.turnManager.isEntityTurn(this) || this.currentMovementPoints <= 0) {
+            return;
+        }
+        
+        if (!this.magicSystem) {
+            return;
+        }
+        
+        const activeSpell = this.magicSystem.getActiveSpell();
+        if (!activeSpell || !activeSpell.isReady()) {
+            return;
+        }
+        
+        this.isSelectingSpellDirection = true;
+        this.turnManager.showSpellDirectionPrompt(activeSpell);
+        
+        // Show target indicators for all possible directions
+        this.showSpellTargetIndicators();
+    }
+
+    // Cast spell in a direction
+    castSpell(direction) {
+        if (!this.isSelectingSpellDirection || !this.magicSystem) return;
+        
+        // Hide target indicators
+        this.hideSpellTargetIndicators();
+        
+        const success = this.magicSystem.castSpell(
+            this.x,
+            this.y,
+            direction,
+            (targetX, targetY, damage) => {
+                // Check if enemy is at target position
+                const grid = this.mapGenerator.getGrid();
+                if (targetX >= 0 && targetX < this.config.mapWidth &&
+                    targetY >= 0 && targetY < this.config.mapHeight &&
+                    grid[targetY][targetX].hasEnemy) {
+                    // Find and damage the enemy
+                    const enemy = this.turnManager.getEntityAt(targetX, targetY);
+                    if (enemy) {
+                        enemy.takeDamage(damage);
+                    }
+                }
+            }
+        );
+        
+        if (success) {
+            // Spell casting consumes all remaining movement points and ends turn
+            this.currentMovementPoints = 0;
+            this.turnManager.updateMovementIndicator(this.currentMovementPoints, this.maxMovementPoints);
+            
+            this.isSelectingSpellDirection = false;
+            this.turnManager.hideSpellDirectionPrompt();
+            
+            // End turn after a short delay to see the spell effect
+            setTimeout(() => {
+                this.turnManager.endTurn();
+            }, 500);
+        }
+    }
+
+    // Show spell target indicators
+    showSpellTargetIndicators() {
+        // Clear any existing indicators first
+        this.hideSpellTargetIndicators();
+        
+        const activeSpell = this.magicSystem.getActiveSpell();
+        if (!activeSpell) return;
+        
+        const directions = ['up', 'down', 'left', 'right'];
+        const uniqueTiles = new Set(); // Track unique tiles to avoid duplicates
+        
+        directions.forEach(direction => {
+            const affectedTiles = activeSpell.getAffectedTiles(this.x, this.y, direction);
+            
+            affectedTiles.forEach(tile => {
+                // Only show indicator if tile is in bounds
+                if (tile.x >= 0 && tile.x < this.config.mapWidth &&
+                    tile.y >= 0 && tile.y < this.config.mapHeight) {
+                    const tileKey = `${tile.x},${tile.y}`;
+                    if (!uniqueTiles.has(tileKey)) {
+                        uniqueTiles.add(tileKey);
+                        this.createTargetIndicator(tile.x, tile.y);
+                    }
+                }
+            });
+        });
+    }
+
+    // Create a single target indicator
+    createTargetIndicator(x, y) {
+        const indicator = document.createElement('div');
+        indicator.className = 'spell-target-indicator';
+        indicator.style.position = 'absolute';
+        
+        // Make the indicator smaller than the full tile
+        const indicatorSize = this.config.tileSize * this.config.scale * 0.5; // 70% of tile size
+        indicator.style.width = `${indicatorSize}px`;
+        indicator.style.height = `${indicatorSize}px`;
+        indicator.style.border = '3px solid #9C27B0';
+        indicator.style.backgroundColor = 'rgba(156, 39, 176, 0.2)';
+        indicator.style.pointerEvents = 'none';
+        indicator.style.borderRadius = '4px';
+        indicator.style.boxSizing = 'border-box';
+        
+        // Calculate isometric position
+        const isoX = (x - y) * (this.config.tileSize / 2) * this.config.scale;
+        const isoY = (x + y) * (this.config.tileSize / 4) * this.config.scale;
+        const offsetX = this.config.mapWidth * this.config.tileSize * this.config.scale;
+        const offsetY = this.config.tileSize * 2 * this.config.scale - 25; // Added small Y offset
+        
+        // Center the smaller indicator on the tile
+        const centerOffset = (this.config.tileSize * this.config.scale - indicatorSize) / 2;
+        indicator.style.left = `${isoX + offsetX + centerOffset}px`;
+        indicator.style.top = `${isoY + offsetY + centerOffset}px`;
+        indicator.style.zIndex = this.mapGenerator.calculateZIndex(x, y) - 1;
+        
+        // Add pulsing animation
+        indicator.style.animation = 'spell-target-pulse 1s infinite';
+        
+        this.mapElement.appendChild(indicator);
+        this.spellTargetIndicators.push(indicator);
+    }
+
+    // Hide all spell target indicators
+    hideSpellTargetIndicators() {
+        this.spellTargetIndicators.forEach(indicator => {
+            if (indicator.parentNode) {
+                indicator.parentNode.removeChild(indicator);
+            }
+        });
+        this.spellTargetIndicators = [];
     }
 
     // Cleanup (for map regeneration)

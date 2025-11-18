@@ -7,6 +7,7 @@ class TurnManager {
         this.turnIndicator = null;
         this.movementIndicator = null;
         this.attackPrompt = null;
+        this.spellPrompt = null;
         this.gameOverScreen = null;
     }
 
@@ -15,6 +16,7 @@ class TurnManager {
         this.turnIndicator = this.createTurnIndicator();
         this.movementIndicator = this.createMovementIndicator();
         this.attackPrompt = this.createAttackPrompt();
+        this.spellPrompt = this.createSpellPrompt();
         this.gameOverScreen = this.createGameOverScreen();
     }
 
@@ -197,6 +199,40 @@ class TurnManager {
         }
     }
 
+    // Create spell direction prompt
+    createSpellPrompt() {
+        const prompt = document.createElement('div');
+        prompt.id = 'spell-prompt';
+        prompt.className = 'spell-prompt';
+        prompt.style.display = 'none';
+        prompt.innerHTML = `
+            <div class="spell-prompt-content">
+                <span class="spell-name">Spell</span>
+                <span class="spell-info">Select Direction (Arrow Keys)</span>
+            </div>
+        `;
+        document.body.appendChild(prompt);
+        return prompt;
+    }
+
+    // Show spell direction prompt
+    showSpellDirectionPrompt(spell) {
+        if (this.spellPrompt) {
+            const nameElement = this.spellPrompt.querySelector('.spell-name');
+            if (nameElement && spell) {
+                nameElement.textContent = spell.name;
+            }
+            this.spellPrompt.style.display = 'block';
+        }
+    }
+
+    // Hide spell direction prompt
+    hideSpellDirectionPrompt() {
+        if (this.spellPrompt) {
+            this.spellPrompt.style.display = 'none';
+        }
+    }
+
     // Create game over screen
     createGameOverScreen() {
         const screen = document.createElement('div');
@@ -239,6 +275,9 @@ class TurnManager {
         }
         if (this.attackPrompt && this.attackPrompt.parentNode) {
             this.attackPrompt.parentNode.removeChild(this.attackPrompt);
+        }
+        if (this.spellPrompt && this.spellPrompt.parentNode) {
+            this.spellPrompt.parentNode.removeChild(this.spellPrompt);
         }
         if (this.gameOverScreen && this.gameOverScreen.parentNode) {
             this.gameOverScreen.parentNode.removeChild(this.gameOverScreen);

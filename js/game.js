@@ -40,6 +40,7 @@ const mapContainer = document.getElementById('map-container');
 const generateBtn = document.getElementById('generateBtn');
 const clearBtn = document.getElementById('clearBtn');
 let attackBtn = null;
+let spellBtn = null;
 
 // Initialize the game
 function init() {
@@ -70,6 +71,17 @@ function init() {
     });
     document.querySelector('.controls').appendChild(attackBtn);
     
+    // Create spell button
+    spellBtn = document.createElement('button');
+    spellBtn.id = 'spellBtn';
+    spellBtn.textContent = 'Cast Spell (S)';
+    spellBtn.addEventListener('click', () => {
+        if (player) {
+            player.startSpellCast();
+        }
+    });
+    document.querySelector('.controls').appendChild(spellBtn);
+    
     // Add restart button listener (will be created by turnManager)
     document.addEventListener('click', (event) => {
         if (event.target.id === 'restart-btn') {
@@ -94,6 +106,9 @@ function generateMap() {
     // Create player
     player = new Player(config, mapElement, mapContainer, mapGenerator, turnManager);
     player.create();
+    
+    // Initialize magic system for player
+    player.initializeMagicSystem();
     
     // Create enemy (pass player reference for pathfinding)
     enemy = new Enemy(config, mapElement, mapContainer, mapGenerator, player, turnManager);
