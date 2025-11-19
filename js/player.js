@@ -28,19 +28,19 @@ class Player {
         // Find a valid starting position (has ground, no pillar)
         let validPosition = false;
         const grid = this.mapGenerator.getGrid();
-        
+
         while (!validPosition) {
             this.x = Math.floor(Math.random() * this.config.mapWidth);
             this.y = Math.floor(Math.random() * this.config.mapHeight);
-            
+
             if (this.mapGenerator.isValidPosition(this.x, this.y)) {
                 validPosition = true;
             }
         }
-        
+
         // Mark player position in grid
         grid[this.y][this.x].hasPlayer = true;
-        
+
         // Create player element
         this.element = document.createElement('div');
         this.element.className = 'player-sprite';
@@ -49,19 +49,19 @@ class Player {
         this.element.style.width = `${playerSize}px`;
         this.element.style.height = `${playerSize}px`;
         this.element.style.imageRendering = 'pixelated';  // Crisp pixel art
-        
+
         // Position the player
         this.updatePosition();
-        
+
         // Add player to map
         this.mapElement.appendChild(this.element);
-        
+
         // Initialize sprite animator
         this.initializeAnimator();
-        
+
         // Create health bar
         this.createHealthBar();
-        
+
         // Start animation loop
         this.startAnimationLoop();
     }
@@ -70,7 +70,7 @@ class Player {
     updatePosition() {
         const isoX = (this.x - this.y) * (this.config.tileSize / 2) * this.config.scale;
         const isoY = (this.x + this.y) * (this.config.tileSize / 4) * this.config.scale;
-        
+
         const offsetX = this.config.mapWidth * this.config.tileSize * this.config.scale;
         const offsetY = this.config.tileSize * 2 * this.config.scale;
         const playerSize = 120 * this.config.scale;  // Match sprite size
@@ -79,7 +79,7 @@ class Player {
         this.element.style.width = `${playerSize}px`;
         this.element.style.height = `${playerSize}px`;
         this.element.style.zIndex = this.mapGenerator.calculateZIndex(this.x, this.y);
-        
+
         // Center camera on player
         this.centerCamera();
     }
@@ -88,22 +88,22 @@ class Player {
     centerCamera() {
         const isoX = (this.x - this.y) * (this.config.tileSize / 2) * this.config.scale;
         const isoY = (this.x + this.y) * (this.config.tileSize / 4) * this.config.scale;
-        
+
         const offsetX = this.config.mapWidth * this.config.tileSize * this.config.scale;
         const offsetY = this.config.tileSize * 2 * this.config.scale;
-        
+
         // Calculate the player's absolute position in the map
         const playerScreenX = isoX + offsetX + this.config.tileSize / 2;
         const playerScreenY = isoY + offsetY + this.config.tileSize / 2;
-        
+
         // Get viewport dimensions
         const viewportWidth = this.mapContainer.clientWidth;
         const viewportHeight = this.mapContainer.clientHeight;
-        
+
         // Calculate scroll position to center player
         const scrollX = playerScreenX - viewportWidth / 2;
         const scrollY = playerScreenY - viewportHeight / 2;
-        
+
         // Smooth scroll to player position
         this.mapContainer.scrollTo({
             left: scrollX,
@@ -139,20 +139,20 @@ class Player {
     // Update health bar position and value
     updateHealthBar() {
         if (!this.healthBar) return;
-        
+
         const isoX = (this.x - this.y) * (this.config.tileSize / 2) * this.config.scale;
         const isoY = (this.x + this.y) * (this.config.tileSize / 4) * this.config.scale - 70;
-        
+
         const offsetX = this.config.mapWidth * this.config.tileSize * this.config.scale;
         const offsetY = this.config.tileSize * 2 * this.config.scale;
-        
+
         this.healthBar.style.left = `${isoX + offsetX + (this.config.tileSize * this.config.scale) / 2 - 20}px`;
         this.healthBar.style.top = `${isoY + offsetY}px`;
-        
+
         const healthPercent = (this.currentHealth / this.maxHealth) * 100;
         const fillElement = this.healthBar.querySelector('.health-bar-fill');
         fillElement.style.width = `${healthPercent}%`;
-        
+
         // Color based on health
         if (healthPercent > 60) {
             fillElement.style.backgroundColor = '#4CAF50';
@@ -168,7 +168,7 @@ class Player {
         this.currentHealth -= amount;
         if (this.currentHealth < 0) this.currentHealth = 0;
         this.updateHealthBar();
-        
+
         if (this.currentHealth <= 0) {
             this.turnManager.gameOver();
         }
@@ -186,28 +186,28 @@ class Player {
     // Attack in a direction
     attack(direction) {
         if (!this.isSelectingAttackDirection) return;
-        
+
         let targetX = this.x;
         let targetY = this.y;
-        
-        switch(direction) {
+
+        switch (direction) {
             case 'up': targetY--; break;
             case 'down': targetY++; break;
             case 'left': targetX--; break;
             case 'right': targetX++; break;
         }
-        
+
         // Check if target is in bounds
-        if (targetX < 0 || targetX >= this.config.mapWidth || 
+        if (targetX < 0 || targetX >= this.config.mapWidth ||
             targetY < 0 || targetY >= this.config.mapHeight) {
             this.isSelectingAttackDirection = false;
             this.turnManager.hideAttackDirectionPrompt();
             return;
         }
-        
+
         // Play attack animation
         this.playAttackAnimation();
-        
+
         // Check if enemy is at target position
         const grid = this.mapGenerator.getGrid();
         if (grid[targetY][targetX].hasEnemy) {
@@ -217,14 +217,14 @@ class Player {
                 enemy.takeDamage(this.attackPoints);
             }
         }
-        
+
         // Attack consumes all remaining movement points and ends turn
         this.currentMovementPoints = 0;
         this.turnManager.updateMovementIndicator(this.currentMovementPoints, this.maxMovementPoints);
-        
+
         this.isSelectingAttackDirection = false;
         this.turnManager.hideAttackDirectionPrompt();
-        
+
         // End turn
         this.turnManager.endTurn();
     }
@@ -248,7 +248,7 @@ class Player {
     handleKeyPress(event) {
         // Handle spell direction selection
         if (this.isSelectingSpellDirection) {
-            switch(event.key) {
+            switch (event.key) {
                 case 'ArrowUp':
                     event.preventDefault();
                     this.castSpell('up');
@@ -273,10 +273,10 @@ class Player {
             }
             return;
         }
-        
+
         // Handle attack direction selection
         if (this.isSelectingAttackDirection) {
-            switch(event.key) {
+            switch (event.key) {
                 case 'ArrowUp':
                     event.preventDefault();
                     this.attack('up');
@@ -300,28 +300,28 @@ class Player {
             }
             return;
         }
-        
+
         // Handle attack button
         if (event.key === 'a' || event.key === 'A') {
             this.startAttack();
             return;
         }
-        
+
         // Handle spell casting button
         if (event.key === 's' || event.key === 'S') {
             this.startSpellCast();
             return;
         }
-        
+
         // Only allow movement if it's player's turn and they have movement points
         if (!this.turnManager.isEntityTurn(this) || this.currentMovementPoints <= 0) {
             return;
         }
-        
+
         let newX = this.x;
         let newY = this.y;
-        
-        switch(event.key) {
+
+        switch (event.key) {
             case 'ArrowUp':
                 newY--;
                 break;
@@ -337,36 +337,36 @@ class Player {
             default:
                 return;  // Ignore other keys
         }
-        
+
         // Prevent default arrow key behavior (scrolling)
         event.preventDefault();
-        
+
         // Check if move is valid
         if (this.isValidMove(newX, newY)) {
             const grid = this.mapGenerator.getGrid();
-            
+
             // Check if space is occupied by enemy
             if (grid[newY][newX].hasEnemy) {
                 return; // Can't move into enemy space
             }
-            
+
             // Update grid - remove player from old position
             grid[this.y][this.x].hasPlayer = false;
-            
+
             // Move player
             this.x = newX;
             this.y = newY;
-            
+
             // Update grid - add player to new position
             grid[this.y][this.x].hasPlayer = true;
-            
+
             this.updatePosition();
             this.updateHealthBar();
-            
+
             // Decrease movement points
             this.currentMovementPoints--;
             this.turnManager.updateMovementIndicator(this.currentMovementPoints, this.maxMovementPoints);
-            
+
             // End turn if no movement points left
             if (this.currentMovementPoints <= 0) {
                 this.turnManager.endTurn();
@@ -382,7 +382,7 @@ class Player {
     // Initialize sprite animator
     initializeAnimator() {
         this.animator = new SpriteAnimator(this.element, this.config);
-        
+
         // Add animations
         this.animator.addAnimation(
             'idle',
@@ -391,7 +391,7 @@ class Player {
             10, // 10 fps
             true // loop
         );
-        
+
         this.animator.addAnimation(
             'attack',
             'art/player/Attack1.png',
@@ -399,7 +399,7 @@ class Player {
             12, // 12 fps
             false // don't loop
         );
-        
+
         // Start with idle animation
         this.animator.play('idle');
     }
@@ -428,10 +428,11 @@ class Player {
     // Initialize magic system
     initializeMagicSystem() {
         this.magicSystem = new MagicSystem(this.config, this.mapElement, this.mapGenerator);
-        
+
         // Add fireball spell
         this.magicSystem.addSpell(new Fireball());
-        
+        this.magicSystem.addSpell(new Lightning());
+
         // Can add more spells here in the future
         // this.magicSystem.addSpell(new LightningBolt());
         // this.magicSystem.addSpell(new Meteor());
@@ -442,19 +443,19 @@ class Player {
         if (!this.turnManager.isEntityTurn(this) || this.currentMovementPoints <= 0) {
             return;
         }
-        
+
         if (!this.magicSystem) {
             return;
         }
-        
+
         const activeSpell = this.magicSystem.getActiveSpell();
         if (!activeSpell || !activeSpell.isReady()) {
             return;
         }
-        
+
         this.isSelectingSpellDirection = true;
         this.turnManager.showSpellDirectionPrompt(activeSpell);
-        
+
         // Show target indicators for all possible directions
         this.showSpellTargetIndicators();
     }
@@ -462,10 +463,10 @@ class Player {
     // Cast spell in a direction
     castSpell(direction) {
         if (!this.isSelectingSpellDirection || !this.magicSystem) return;
-        
+
         // Hide target indicators
         this.hideSpellTargetIndicators();
-        
+
         const success = this.magicSystem.castSpell(
             this.x,
             this.y,
@@ -484,15 +485,15 @@ class Player {
                 }
             }
         );
-        
+
         if (success) {
             // Spell casting consumes all remaining movement points and ends turn
             this.currentMovementPoints = 0;
             this.turnManager.updateMovementIndicator(this.currentMovementPoints, this.maxMovementPoints);
-            
+
             this.isSelectingSpellDirection = false;
             this.turnManager.hideSpellDirectionPrompt();
-            
+
             // End turn after a short delay to see the spell effect
             setTimeout(() => {
                 this.turnManager.endTurn();
@@ -500,20 +501,34 @@ class Player {
         }
     }
 
+    // Switch to next spell
+    switchSpell() {
+        if (this.magicSystem) {
+            this.magicSystem.nextSpell();
+            return this.magicSystem.getActiveSpell();
+        }
+        return null;
+    }
+
+    // Get current spell
+    getCurrentSpell() {
+        return this.magicSystem ? this.magicSystem.getActiveSpell() : null;
+    }
+
     // Show spell target indicators
     showSpellTargetIndicators() {
         // Clear any existing indicators first
         this.hideSpellTargetIndicators();
-        
+
         const activeSpell = this.magicSystem.getActiveSpell();
         if (!activeSpell) return;
-        
+
         const directions = ['up', 'down', 'left', 'right'];
         const uniqueTiles = new Set(); // Track unique tiles to avoid duplicates
-        
+
         directions.forEach(direction => {
             const affectedTiles = activeSpell.getAffectedTiles(this.x, this.y, direction);
-            
+
             affectedTiles.forEach(tile => {
                 // Only show indicator if tile is in bounds
                 if (tile.x >= 0 && tile.x < this.config.mapWidth &&
@@ -533,7 +548,7 @@ class Player {
         const indicator = document.createElement('div');
         indicator.className = 'spell-target-indicator';
         indicator.style.position = 'absolute';
-        
+
         // Make the indicator smaller than the full tile
         const indicatorSize = this.config.tileSize * this.config.scale * 0.5; // 70% of tile size
         indicator.style.width = `${indicatorSize}px`;
@@ -543,22 +558,22 @@ class Player {
         indicator.style.pointerEvents = 'none';
         indicator.style.borderRadius = '4px';
         indicator.style.boxSizing = 'border-box';
-        
+
         // Calculate isometric position
         const isoX = (x - y) * (this.config.tileSize / 2) * this.config.scale;
         const isoY = (x + y) * (this.config.tileSize / 4) * this.config.scale;
         const offsetX = this.config.mapWidth * this.config.tileSize * this.config.scale;
         const offsetY = this.config.tileSize * 2 * this.config.scale - 25; // Added small Y offset
-        
+
         // Center the smaller indicator on the tile
         const centerOffset = (this.config.tileSize * this.config.scale - indicatorSize) / 2;
         indicator.style.left = `${isoX + offsetX + centerOffset}px`;
         indicator.style.top = `${isoY + offsetY + centerOffset}px`;
         indicator.style.zIndex = this.mapGenerator.calculateZIndex(x, y) - 1;
-        
+
         // Add pulsing animation
         indicator.style.animation = 'spell-target-pulse 1s infinite';
-        
+
         this.mapElement.appendChild(indicator);
         this.spellTargetIndicators.push(indicator);
     }

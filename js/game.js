@@ -46,11 +46,11 @@ let spellBtn = null;
 function init() {
     // Initialize map generator
     mapGenerator = new MapGenerator(config, mapElement);
-    
+
     // Initialize turn manager
     turnManager = new TurnManager();
     turnManager.init();
-    
+
     // Add event listeners
     generateBtn.addEventListener('click', generateMap);
     clearBtn.addEventListener('click', clearMap);
@@ -59,7 +59,7 @@ function init() {
             player.handleKeyPress(event);
         }
     });
-    
+
     // Create attack button
     attackBtn = document.createElement('button');
     attackBtn.id = 'attackBtn';
@@ -70,7 +70,9 @@ function init() {
         }
     });
     document.querySelector('.controls').appendChild(attackBtn);
-    
+
+
+
     // Create spell button
     spellBtn = document.createElement('button');
     spellBtn.id = 'spellBtn';
@@ -81,7 +83,19 @@ function init() {
         }
     });
     document.querySelector('.controls').appendChild(spellBtn);
-    
+
+    // Create switch spell button
+    const switchSpellBtn = document.createElement('button');
+    switchSpellBtn.id = 'switchSpellBtn';
+    switchSpellBtn.textContent = 'Switch Spell (Tab)';
+    switchSpellBtn.addEventListener('click', () => {
+        if (player) {
+            const currentSpell = player.switchSpell();
+            updateSpellUI(currentSpell);
+        }
+    });
+    document.querySelector('.controls').appendChild(switchSpellBtn);
+
     // Add restart button listener (will be created by turnManager)
     document.addEventListener('click', (event) => {
         if (event.target.id === 'restart-btn') {
@@ -89,7 +103,7 @@ function init() {
             generateMap();
         }
     });
-    
+
     // Generate initial map
     generateMap();
 }
@@ -98,26 +112,27 @@ function init() {
 function generateMap() {
     // Clear existing map
     clearMap();
-    
+
     // Generate and render the map
     mapGenerator.generate();
     mapGenerator.render();
-    
+
     // Create player
     player = new Player(config, mapElement, mapContainer, mapGenerator, turnManager);
     player.create();
-    
+
     // Initialize magic system for player
     player.initializeMagicSystem();
-    
+    updateSpellUI(player.getCurrentSpell());
+
     // Create enemy (pass player reference for pathfinding)
     enemy = new Enemy(config, mapElement, mapContainer, mapGenerator, player, turnManager);
     enemy.create();
-    
+
     // Register entities with turn manager
     turnManager.registerEntity(player, 'player');
     turnManager.registerEntity(enemy, 'enemy');
-    
+
     // Start turn-based gameplay
     turnManager.start();
 }
@@ -129,14 +144,21 @@ function clearMap() {
     if (turnManager) {
         turnManager.clearEntities();
     }
-    
+
     // Destroy enemy if it exists
     if (enemy) {
         enemy.destroy();
         enemy = null;
     }
-    
+
     mapGenerator.clear();
+}
+
+// Update spell UI
+function updateSpellUI(spell) {
+    if (!spellBtn || !spell) return;
+
+    spellBtn.textContent = `Cast ${spell.name} (S)`;
 }
 
 // Start the game
