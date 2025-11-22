@@ -102,6 +102,17 @@ function init() {
             turnManager.hideGameOver();
             generateMap();
         }
+
+        // Win screen buttons
+        if (event.target.id === 'win-new-map-btn') {
+            turnManager.hideWinScreen();
+            generateMap();
+        }
+
+        if (event.target.id === 'win-back-to-town-btn') {
+            console.log('Returning to town...');
+            alert('Returning to town... (Placeholder)');
+        }
     });
 
     // Generate initial map

@@ -9,6 +9,7 @@ class TurnManager {
         this.attackPrompt = null;
         this.spellPrompt = null;
         this.gameOverScreen = null;
+        this.winScreen = null;
     }
 
     // Initialize the turn manager
@@ -18,6 +19,7 @@ class TurnManager {
         this.attackPrompt = this.createAttackPrompt();
         this.spellPrompt = this.createSpellPrompt();
         this.gameOverScreen = this.createGameOverScreen();
+        this.winScreen = this.createWinScreen();
     }
 
     // Register an entity that can take turns
@@ -34,17 +36,18 @@ class TurnManager {
         const index = this.entities.findIndex(e => e.entity === entity);
         if (index !== -1) {
             this.entities.splice(index, 1);
-            
+
             // Adjust current turn index if needed
             if (this.currentTurnIndex >= this.entities.length) {
                 this.currentTurnIndex = 0;
             }
-            
+
             // If no enemies left, player wins
             const hasEnemies = this.entities.some(e => e.type === 'enemy');
             if (!hasEnemies) {
-                // Player wins - could show victory screen
+                // Player wins - show victory screen
                 console.log('All enemies defeated!');
+                this.showWinScreen();
             }
         }
     }
@@ -72,7 +75,7 @@ class TurnManager {
             console.warn('No entities registered for turns');
             return;
         }
-        
+
         this.currentTurnIndex = 0;
         this.startTurn();
     }
@@ -80,17 +83,17 @@ class TurnManager {
     // Start the current entity's turn
     startTurn() {
         if (this.entities.length === 0) return;
-        
+
         const current = this.entities[this.currentTurnIndex];
         this.turnInProgress = true;
-        
+
         // Update visual indicator
         this.updateTurnIndicator(current);
-        
+
         // Initialize movement indicator with max moves
         const maxMoves = current.entity.getMaxMoves();
         this.updateMovementIndicator(maxMoves, maxMoves);
-        
+
         // Notify the entity it's their turn
         if (current.type === 'player') {
             current.entity.startTurn();
@@ -107,10 +110,10 @@ class TurnManager {
     // End the current turn and move to next entity
     endTurn() {
         this.turnInProgress = false;
-        
+
         // Move to next entity
         this.currentTurnIndex = (this.currentTurnIndex + 1) % this.entities.length;
-        
+
         // Start next turn
         this.startTurn();
     }
@@ -144,10 +147,10 @@ class TurnManager {
     // Update movement indicator display
     updateMovementIndicator(current, max) {
         if (!this.movementIndicator) return;
-        
+
         // Clear existing dots
         this.movementIndicator.innerHTML = '';
-        
+
         // Create movement dots
         for (let i = 0; i < max; i++) {
             const dot = document.createElement('div');
@@ -162,10 +165,10 @@ class TurnManager {
     // Update turn indicator display
     updateTurnIndicator(currentEntity) {
         if (!this.turnIndicator) return;
-        
+
         const isPlayer = currentEntity.type === 'player';
         this.turnIndicator.textContent = `${currentEntity.name}'s Turn`;
-        
+
         // Different colors for player vs enemy
         if (isPlayer) {
             this.turnIndicator.style.backgroundColor = '#ffefefff';
@@ -265,6 +268,39 @@ class TurnManager {
         }
     }
 
+    // Create win screen
+    createWinScreen() {
+        const screen = document.createElement('div');
+        screen.id = 'win-screen';
+        screen.className = 'win-screen';
+        screen.style.display = 'none';
+        screen.innerHTML = `
+            <div class="win-content">
+                <h1>Victory!</h1>
+                <p>All enemies defeated!</p>
+                <button id="win-new-map-btn" class="win-btn win-btn-primary">New Map</button>
+                <button id="win-back-to-town-btn" class="win-btn win-btn-secondary">Back to Town</button>
+            </div>
+        `;
+        document.body.appendChild(screen);
+        return screen;
+    }
+
+    // Show win screen
+    showWinScreen() {
+        this.turnInProgress = false;
+        if (this.winScreen) {
+            this.winScreen.style.display = 'flex';
+        }
+    }
+
+    // Hide win screen
+    hideWinScreen() {
+        if (this.winScreen) {
+            this.winScreen.style.display = 'none';
+        }
+    }
+
     // Destroy the turn manager
     destroy() {
         if (this.turnIndicator && this.turnIndicator.parentNode) {
@@ -281,6 +317,9 @@ class TurnManager {
         }
         if (this.gameOverScreen && this.gameOverScreen.parentNode) {
             this.gameOverScreen.parentNode.removeChild(this.gameOverScreen);
+        }
+        if (this.winScreen && this.winScreen.parentNode) {
+            this.winScreen.parentNode.removeChild(this.winScreen);
         }
         this.clearEntities();
     }

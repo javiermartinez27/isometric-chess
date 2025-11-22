@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,7 +12,7 @@
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
             margin: 0;
             padding: 0;
@@ -19,7 +20,7 @@
             overflow: hidden;
             font-family: 'Permanent Marker', cursive;
         }
-        
+
         #map-container {
             position: fixed;
             top: 0;
@@ -29,13 +30,13 @@
             overflow: auto;
             background-color: #2a2a2a;
         }
-        
+
         #map {
             position: absolute;
             top: 0;
             left: 0;
         }
-        
+
         .tile {
             position: absolute;
             width: 39px;
@@ -43,7 +44,7 @@
             background-size: cover;
             image-rendering: pixelated;
         }
-        
+
         .controls {
             position: fixed;
             bottom: 30px;
@@ -53,7 +54,7 @@
             gap: 15px;
             z-index: 20000;
         }
-        
+
         .turn-indicator {
             position: fixed;
             top: 30px;
@@ -71,7 +72,7 @@
             text-align: center;
             min-width: 200px;
         }
-        
+
         .movement-indicator {
             position: fixed;
             top: 100px;
@@ -86,7 +87,7 @@
             box-shadow: 4px 4px 0px #333;
             z-index: 10000;
         }
-        
+
         .movement-dot {
             width: 16px;
             height: 16px;
@@ -95,19 +96,19 @@
             border: 2px solid #333;
             transition: background-color 0.2s;
         }
-        
+
         .movement-dot.active {
             background-color: #4CAF50;
             box-shadow: 0 0 8px rgba(76, 175, 80, 0.5);
         }
-        
+
         .health-bar {
             position: absolute;
             width: 40px;
             height: 6px;
             z-index: 100;
         }
-        
+
         .health-bar-bg {
             width: 100%;
             height: 100%;
@@ -116,13 +117,13 @@
             border-radius: 3px;
             overflow: hidden;
         }
-        
+
         .health-bar-fill {
             height: 100%;
             background-color: #4CAF50;
             transition: width 0.3s, background-color 0.3s;
         }
-        
+
         .attack-prompt {
             position: fixed;
             top: 170px;
@@ -139,12 +140,19 @@
             z-index: 10000;
             animation: pulse 1s infinite;
         }
-        
+
         @keyframes pulse {
-            0%, 100% { transform: translateX(-50%) scale(1); }
-            50% { transform: translateX(-50%) scale(1.05); }
+
+            0%,
+            100% {
+                transform: translateX(-50%) scale(1);
+            }
+
+            50% {
+                transform: translateX(-50%) scale(1.05);
+            }
         }
-        
+
         .spell-prompt {
             position: fixed;
             top: 170px;
@@ -161,38 +169,41 @@
             z-index: 10000;
             animation: pulse 1s infinite;
         }
-        
+
         .spell-prompt-content {
             display: flex;
             flex-direction: column;
             gap: 8px;
             align-items: center;
         }
-        
+
         .spell-name {
             font-size: 20px;
             font-weight: bold;
         }
-        
+
         .spell-info {
             font-size: 14px;
             opacity: 0.9;
         }
-        
+
         .spell-projectile {
             transition: all 0.3s ease-out;
         }
-        
+
         .spell-target-indicator {
             transform: rotateX(60deg) rotateZ(45deg);
         }
-        
+
         @keyframes spell-target-pulse {
-            0%, 100% { 
+
+            0%,
+            100% {
                 opacity: 0.6;
                 transform: rotateX(60deg) rotateZ(45deg) scale(1);
             }
-            50% { 
+
+            50% {
                 opacity: 0.9;
                 transform: rotateX(60deg) rotateZ(45deg) scale(1.05);
             }
@@ -203,10 +214,17 @@
         }
 
         @keyframes fireball-pulse {
-            0% { transform: scale(1); opacity: 0.9; }
-            100% { transform: scale(1.2); opacity: 1; }
+            0% {
+                transform: scale(1);
+                opacity: 0.9;
+            }
+
+            100% {
+                transform: scale(1.2);
+                opacity: 1;
+            }
         }
-        
+
         .game-over-screen {
             position: fixed;
             top: 0;
@@ -219,7 +237,7 @@
             justify-content: center;
             z-index: 20000;
         }
-        
+
         .game-over-content {
             background-color: #fff;
             padding: 40px 60px;
@@ -228,7 +246,7 @@
             box-shadow: 8px 8px 0px #333;
             text-align: center;
         }
-        
+
         .game-over-content h1 {
             font-family: 'Permanent Marker', cursive;
             font-size: 48px;
@@ -236,14 +254,14 @@
             margin: 0 0 20px 0;
             text-shadow: 3px 3px 0px #333;
         }
-        
+
         .game-over-content p {
             font-family: 'Permanent Marker', cursive;
             font-size: 24px;
             color: #333;
             margin: 0 0 30px 0;
         }
-        
+
         .restart-button {
             padding: 15px 40px;
             font-size: 24px;
@@ -256,17 +274,87 @@
             box-shadow: 4px 4px 0px #333;
             transition: all 0.1s;
         }
-        
+
         .restart-button:hover {
             transform: translate(2px, 2px);
             box-shadow: 2px 2px 0px #333;
         }
-        
+
         .restart-button:active {
             transform: translate(4px, 4px);
             box-shadow: 0px 0px 0px #333;
         }
-        
+
+        .win-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 20000;
+        }
+
+        .win-content {
+            background-color: #fff;
+            padding: 40px 60px;
+            border: 5px solid #333;
+            border-radius: 12px;
+            box-shadow: 8px 8px 0px #333;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .win-content h1 {
+            font-family: 'Permanent Marker', cursive;
+            font-size: 48px;
+            color: #4CAF50;
+            margin: 0 0 10px 0;
+            text-shadow: 3px 3px 0px #333;
+        }
+
+        .win-content p {
+            font-family: 'Permanent Marker', cursive;
+            font-size: 24px;
+            color: #333;
+            margin: 0 0 20px 0;
+        }
+
+        .win-btn {
+            padding: 15px 40px;
+            font-size: 24px;
+            font-family: 'Permanent Marker', cursive;
+            cursor: pointer;
+            color: #fff;
+            border: 3px solid #333;
+            border-radius: 8px;
+            box-shadow: 4px 4px 0px #333;
+            transition: all 0.1s;
+        }
+
+        .win-btn-primary {
+            background-color: #4CAF50;
+        }
+
+        .win-btn-secondary {
+            background-color: #2196F3;
+        }
+
+        .win-btn:hover {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0px #333;
+        }
+
+        .win-btn:active {
+            transform: translate(4px, 4px);
+            box-shadow: 0px 0px 0px #333;
+        }
+
         button {
             padding: 12px 24px;
             font-size: 18px;
@@ -280,25 +368,25 @@
             transition: all 0.1s;
             position: relative;
         }
-        
+
         button:hover {
             transform: translate(2px, 2px);
             box-shadow: 2px 2px 0px #333;
         }
-        
+
         button:active {
             transform: translate(4px, 4px);
             box-shadow: 0px 0px 0px #333;
         }
-        
+
         #generateBtn {
             background-color: #ffffff;
         }
-        
+
         #clearBtn {
             background-color: #ffffff;
         }
-        
+
         .player-sprite {
             image-rendering: pixelated;
             image-rendering: -moz-crisp-edges;
@@ -306,13 +394,14 @@
         }
     </style>
 </head>
+
 <body>
     <div class="turn-indicator" id="turn-indicator"></div>
 
     <div id="map-container">
         <div id="map"></div>
     </div>
-    
+
     <div class="controls">
         <button id="generateBtn">New Map</button>
         <button id="clearBtn">Clear</button>
@@ -326,4 +415,5 @@
     <script src="js/enemy.js"></script>
     <script src="js/game.js"></script>
 </body>
+
 </html>
